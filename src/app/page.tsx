@@ -17,6 +17,8 @@ export default function Home() {
   return (
     <>
       <NavBar />
+      {/* Skip-link target: id must match href="#main-content" in layout.tsx */}
+      <main id="main-content">
       <Hero />
       <ScrollStory3DLoader />
       <ResearchThemes />
@@ -26,6 +28,7 @@ export default function Home() {
       <HonorsEducation />
       <Contact />
       <Footer />
+      </main>
     </>
   );
 }

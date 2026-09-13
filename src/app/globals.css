@@ -163,6 +163,8 @@
 html {
   scrollbar-width: thin;
   scrollbar-color: var(--border-strong) transparent;
+  /* Prevent any component from creating a horizontal scrollbar */
+  overflow-x: hidden;
 }
 
 html::-webkit-scrollbar {
@@ -243,4 +245,147 @@ html.js-ready .framer-hidden {
   opacity: 1 !important;
   transform: none !important;
   transition: none !important;
+}
+
+/* ─── Skip link (accessibility) ─────────────────────────────────────────────
+ * Off-screen by default, visible on :focus for keyboard users. */
+.skip-link {
+  position: fixed;
+  top: -100%;
+  left: 0;
+  z-index: 9999;
+  padding: 0.75rem 1.25rem;
+  background: var(--accent);
+  color: var(--accent-foreground);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 0 0 0.5rem 0;
+  /* Transition only when visible — prevents flash on page load */
+  transition: top 0.15s ease;
+}
+.skip-link:focus {
+  top: 0;
+  outline: 2px solid var(--accent-foreground);
+  outline-offset: 2px;
+}
+
+/* ─── @supports guards ───────────────────────────────────────────────────────
+ * Provide safe fallbacks for features not universally supported. */
+
+/* aspect-ratio: not supported in iOS < 15 / Safari < 15 */
+@supports not (aspect-ratio: 1) {
+  /* Fallback: use padding-top trick for 16:9 containers */
+  [style*="aspect-ratio"] {
+    position: relative;
+    height: 0;
+    padding-top: 56.25%;
+  }
+  [style*="aspect-ratio"] > * {
+    position: absolute;
+    inset: 0;
+  }
+}
+
+/* gap on flexbox: not supported in iOS < 14.5 / Safari < 14.1 */
+@supports not (gap: 0px) {
+  /* Provide margin-based spacing for older Safari */
+  .flex-gap-fallback > * + * {
+    margin-left: 1rem;
+  }
+  .flex-gap-fallback.flex-col > * + * {
+    margin-left: 0;
+    margin-top: 1rem;
+  }
+}
+
+/* dvh: not supported in older browsers; min-h-screen already has vh fallback above */
+/* No additional @supports needed — the cascade provides vh first */
+
+/* -webkit-backdrop-filter: required for Safari 9–15.3 */
+.backdrop-blur,
+[class*="backdrop-blur"] {
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+/* ─── Forced-colors / Windows High Contrast mode ─────────────────────────────
+ * Ensure text, borders, and interactive elements remain legible. */
+@media (forced-colors: active) {
+  /* Borders that rely on CSS custom properties may become invisible */
+  .skip-link {
+    border: 2px solid ButtonText;
+    background: ButtonFace;
+    color: ButtonText;
+  }
+  /* Accent-colored SVG fills can vanish; mark them explicitly */
+  svg circle,
+  svg path,
+  svg polygon,
+  svg line {
+    forced-color-adjust: auto;
+  }
+  /* Interactive elements must retain their contrast */
+  input[type="range"] {
+    forced-color-adjust: none;
+    accent-color: Highlight;
+  }
+}
+
+/* ─── Print stylesheet ────────────────────────────────────────────────────────
+ * Clean, black-on-white output for printing. */
+@media print {
+  /* Hide navigation, hero scene, and interactive widgets */
+  nav,
+  footer,
+  .skip-link,
+  [data-radix-dialog-overlay],
+  canvas {
+    display: none !important;
+  }
+
+  /* Reset colours */
+  *,
+  *::before,
+  *::after {
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Single column, full width */
+  body {
+    font-size: 11pt;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  section {
+    page-break-inside: avoid;
+    margin-bottom: 1rem;
+  }
+
+  h1, h2, h3 {
+    page-break-after: avoid;
+  }
+
+  a {
+    text-decoration: underline;
+    color: black !important;
+  }
+
+  /* Print URLs after links */
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 9pt;
+    color: #555 !important;
+  }
+
+  /* Illustrations: keep inline but don't break across pages */
+  svg {
+    max-width: 100% !important;
+    page-break-inside: avoid;
+  }
 }

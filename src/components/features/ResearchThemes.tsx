@@ -3,6 +3,121 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
 import { Reveal } from "@/components/ui/Reveal";
+
+// ─── Autoplay hook ────────────────────────────────────────────────────────────
+// Ping-pong animates a value between min and max over periodMs.
+// Pauses offscreen (IntersectionObserver at 0.2 threshold), on hover/focus/
+// pointerdown (user has control), and when prefers-reduced-motion is set.
+// Resumes automatically 3 s after the last interaction.
+// Safari compat: no CSS `transition: d` — path is recomputed each tick.
+function useAutoplay({
+  min,
+  max,
+  periodMs,
+  representativeValue,
+}: {
+  min: number;
+  max: number;
+  periodMs: number;
+  representativeValue: number;
+}) {
+  // Stable reduced-motion check: computed once at mount, never changes.
+  const prefersReduced = useMemo(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    []
+  );
+
+  const [value, setValue] = useState<number>(representativeValue);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef<number | null>(null);
+  const inViewRef = useRef(false);
+  const pausedRef = useRef(false);
+  const startTsRef = useRef<number | null>(null);
+  const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cancel any running rAF.
+  const stopRaf = useCallback(() => {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+  }, []);
+
+  // rAF tick: compute ping-pong value from elapsed time.
+  const tick = useCallback(
+    (ts: number) => {
+      if (!inViewRef.current || pausedRef.current) return;
+      if (startTsRef.current === null) startTsRef.current = ts;
+      const elapsed = ts - startTsRef.current;
+      const raw = (elapsed % periodMs) / periodMs; // 0–1 repeating
+      const triangle = raw < 0.5 ? raw * 2 : 2 - raw * 2; // 0→1→0
+      const eased = triangle * triangle * (3 - 2 * triangle); // smoothstep
+      setValue(Math.round(min + eased * (max - min)));
+      rafRef.current = requestAnimationFrame(tick);
+    },
+    [min, max, periodMs]
+  );
+
+  // Start rAF only when conditions allow.
+  const startRaf = useCallback(() => {
+    if (rafRef.current !== null || !inViewRef.current || pausedRef.current || prefersReduced)
+      return;
+    rafRef.current = requestAnimationFrame(tick);
+  }, [tick, prefersReduced]);
+
+  // Pause on any user interaction; resume automatically after 3 s.
+  const handleInteraction = useCallback(() => {
+    pausedRef.current = true;
+    stopRaf();
+    if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+    resumeTimerRef.current = setTimeout(() => {
+      pausedRef.current = false;
+      startTsRef.current = null; // re-anchor timing on resume
+      startRaf();
+    }, 3000);
+  }, [stopRaf, startRaf]);
+
+  // IntersectionObserver: start/stop when the card enters/leaves the viewport.
+  useEffect(() => {
+    if (prefersReduced) {
+      setValue(representativeValue);
+      return;
+    }
+    const el = containerRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        inViewRef.current = entry.isIntersecting;
+        if (entry.isIntersecting && !pausedRef.current) {
+          startRaf();
+        } else {
+          stopRaf();
+        }
+      },
+      { threshold: 0.2 }
+    );
+    obs.observe(el);
+    return () => {
+      obs.disconnect();
+      stopRaf();
+      if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+    };
+  }, [prefersReduced, representativeValue, startRaf, stopRaf]);
+
+  // Shared event handlers to attach to the card wrapper.
+  const interactionHandlers = useMemo(
+    () => ({
+      onMouseEnter: handleInteraction,
+      onFocus: handleInteraction,
+      onPointerDown: handleInteraction,
+    }),
+    [handleInteraction]
+  );
+
+  return { value, setValue, containerRef, interactionHandlers };
+}
 import {
   Dialog,
   DialogContent,
@@ -166,93 +281,86 @@ function routeColor(risk: number): string {
 }
 
 function UAVMiniMap({ isDark }: { isDark: boolean }) {
-  const [risk, setRisk] = useState(0);
+  // Autoplay: ping-pong risk 0→100→0 over 7 s.
+  const { value: risk, setValue: setRisk, containerRef, interactionHandlers } = useAutoplay({
+    min: 0, max: 100, periodMs: 7000, representativeValue: 50,
+  });
+
+  // Path is computed synchronously from risk — NO CSS `transition: d` (Safari unsupported).
   const pathD = uavRoutePath(risk);
   const color = routeColor(risk);
 
-  const bg    = isDark ? "#0f172a" : "#f0f9ff";
-  const terra = isDark ? "#1e3a2a" : "#d1fae5";
+  const bg        = isDark ? "#0f172a" : "#f0f9ff";
+  const terra     = isDark ? "#1e3a2a" : "#d1fae5";
   const stormFill = isDark ? "#334155" : "#94a3b8";
-  const textC = isDark ? "#94a3b8" : "#475569";
-
-  const prefersReduced =
-    typeof window !== "undefined"
-      ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
-      : false;
+  const textC     = isDark ? "#94a3b8" : "#475569";
 
   return (
-    <IllustrationCard>
-      <svg
-        viewBox={`0 0 ${MAP_W} ${MAP_H}`}
-        width="100%"
-        style={{ display: "block", borderRadius: 8, background: bg, marginBottom: 10 }}
-        role="img"
-        aria-label="Top-down UAV route map showing storm avoidance"
-      >
-        {/* Terrain patches */}
-        <rect x="0" y="0" width={MAP_W} height={MAP_H} fill={bg} />
-        <ellipse cx="80" cy="150" rx="55" ry="30" fill={terra} opacity={0.6} />
-        <ellipse cx="220" cy="55" rx="40" ry="22" fill={terra} opacity={0.5} />
+    /* containerRef + interactionHandlers wire up autoplay pause/resume */
+    <div ref={containerRef} {...interactionHandlers}>
+      <IllustrationCard>
+        <svg
+          viewBox={`0 0 ${MAP_W} ${MAP_H}`}
+          width="100%"
+          style={{ display: "block", borderRadius: 8, background: bg, marginBottom: 10 }}
+          role="img"
+          aria-label="Top-down UAV route map showing storm avoidance"
+        >
+          {/* Terrain patches */}
+          <rect x="0" y="0" width={MAP_W} height={MAP_H} fill={bg} />
+          <ellipse cx="80" cy="150" rx="55" ry="30" fill={terra} opacity={0.6} />
+          <ellipse cx="220" cy="55" rx="40" ry="22" fill={terra} opacity={0.5} />
 
-        {/* Storm cell */}
-        <circle cx={STORM.x} cy={STORM.y} r={STORM.r} fill={stormFill} opacity={0.75} />
-        <circle cx={STORM.x} cy={STORM.y} r={STORM.r + 10} fill="none"
-          stroke={stormFill} strokeWidth="1.5" opacity={0.3} strokeDasharray="4,4" />
-        {/* Storm swirl lines */}
-        {[0, 60, 120, 180, 240, 300].map((deg) => {
-          const rad = (deg * Math.PI) / 180;
-          const x1 = STORM.x + Math.cos(rad) * (STORM.r - 8);
-          const y1 = STORM.y + Math.sin(rad) * (STORM.r - 8);
-          const x2 = STORM.x + Math.cos(rad + 0.9) * (STORM.r - 20);
-          const y2 = STORM.y + Math.sin(rad + 0.9) * (STORM.r - 20);
-          return (
-            <line key={deg} x1={x1} y1={y1} x2={x2} y2={y2}
-              stroke="white" strokeWidth="1" opacity={0.25} />
-          );
-        })}
-        <text x={STORM.x} y={STORM.y + 4} textAnchor="middle"
-          fontSize="9" fill="white" opacity={0.6} fontFamily="ui-monospace,monospace">
-          STORM
-        </text>
+          {/* Storm cell */}
+          <circle cx={STORM.x} cy={STORM.y} r={STORM.r} fill={stormFill} opacity={0.75} />
+          <circle cx={STORM.x} cy={STORM.y} r={STORM.r + 10} fill="none"
+            stroke={stormFill} strokeWidth="1.5" opacity={0.3} strokeDasharray="4,4" />
+          {[0, 60, 120, 180, 240, 300].map((deg) => {
+            const rad = (deg * Math.PI) / 180;
+            const x1 = STORM.x + Math.cos(rad) * (STORM.r - 8);
+            const y1 = STORM.y + Math.sin(rad) * (STORM.r - 8);
+            const x2 = STORM.x + Math.cos(rad + 0.9) * (STORM.r - 20);
+            const y2 = STORM.y + Math.sin(rad + 0.9) * (STORM.r - 20);
+            return <line key={deg} x1={x1} y1={y1} x2={x2} y2={y2} stroke="white" strokeWidth="1" opacity={0.25} />;
+          })}
+          <text x={STORM.x} y={STORM.y + 4} textAnchor="middle"
+            fontSize="9" fill="white" opacity={0.6} fontFamily="ui-monospace,monospace">STORM</text>
 
-        {/* Route */}
-        <path
-          d={pathD}
-          fill="none"
-          stroke={color}
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          style={{ transition: prefersReduced ? "none" : "d 0.25s ease, stroke 0.25s ease" }}
+          {/* Route — d recomputed each frame; no CSS transition: d (breaks Safari) */}
+          <path
+            d={pathD}
+            fill="none"
+            stroke={color}
+            strokeWidth="2.5"
+            strokeLinecap="round"
+          />
+          {/* Arrow — fill transition is fine on all browsers */}
+          <polygon
+            points={`${GOAL.x - 1},${GOAL.y - 5} ${GOAL.x + 8},${GOAL.y} ${GOAL.x - 1},${GOAL.y + 5}`}
+            fill={color}
+          />
+
+          {/* Markers */}
+          <circle cx={START.x} cy={START.y} r="5" fill="#64748b" />
+          <circle cx={GOAL.x} cy={GOAL.y} r="5" fill="#22c55e" />
+          <circle cx={GOAL.x} cy={GOAL.y} r="9" fill="none" stroke="#22c55e" strokeWidth="1.5" opacity={0.4} />
+          <text x={START.x} y={START.y - 9} textAnchor="middle" fontSize="9"
+            fill={textC} fontFamily="ui-monospace,monospace">Start</text>
+          <text x={GOAL.x} y={GOAL.y - 12} textAnchor="middle" fontSize="9"
+            fill={textC} fontFamily="ui-monospace,monospace">Goal</text>
+        </svg>
+
+        <Slider
+          label="Risk aversion"
+          value={risk}
+          min={0}
+          max={100}
+          onChange={(v) => { setRisk(v); interactionHandlers.onPointerDown(); }}
+          formatValue={(v) => (v === 0 ? "None (straight)" : v === 100 ? "Maximum" : `${v}%`)}
+          accentColor="#6366f1"
         />
-        {/* Arrow at goal end */}
-        <polygon
-          points={`${GOAL.x - 1},${GOAL.y - 5} ${GOAL.x + 8},${GOAL.y} ${GOAL.x - 1},${GOAL.y + 5}`}
-          fill={color}
-          style={{ transition: prefersReduced ? "none" : "fill 0.25s ease" }}
-        />
-
-        {/* Start/Goal markers */}
-        <circle cx={START.x} cy={START.y} r="5" fill="#64748b" />
-        <circle cx={GOAL.x}  cy={GOAL.y}  r="5" fill="#22c55e" />
-        <circle cx={GOAL.x}  cy={GOAL.y}  r="9" fill="none" stroke="#22c55e" strokeWidth="1.5" opacity={0.4} />
-
-        {/* Labels */}
-        <text x={START.x} y={START.y - 9} textAnchor="middle" fontSize="9"
-          fill={textC} fontFamily="ui-monospace,monospace">Start</text>
-        <text x={GOAL.x}  y={GOAL.y - 12} textAnchor="middle" fontSize="9"
-          fill={textC} fontFamily="ui-monospace,monospace">Goal</text>
-      </svg>
-
-      <Slider
-        label="Risk aversion"
-        value={risk}
-        min={0}
-        max={100}
-        onChange={setRisk}
-        formatValue={(v) => v === 0 ? "None (straight)" : v === 100 ? "Maximum" : `${v}%`}
-        accentColor="#6366f1"
-      />
-    </IllustrationCard>
+      </IllustrationCard>
+    </div>
   );
 }
 
@@ -284,41 +392,37 @@ function bandHalfWidth(targetPct: number): number {
 }
 
 function CoverageSVG({ isDark }: { isDark: boolean }) {
-  const [target, setTarget] = useState(90);
+  // Autoplay: ping-pong coverage target 80→99→80 over 8 s.
+  const { value: target, setValue: setTarget, containerRef, interactionHandlers } = useAutoplay({
+    min: 80, max: 99, periodMs: 8000, representativeValue: 90,
+  });
+
   const hw = bandHalfWidth(target);
 
   const SVG_W = 280;
   const SVG_H = 160;
-  // Map data [-1,1] → SVG coords
   const px = (x: number) => 20 + ((x + 1) / 2) * (SVG_W - 40);
   const py = (y: number) => SVG_H / 2 - y * 60;
 
-  const bandFill  = isDark ? "rgba(99,102,241,0.18)" : "rgba(99,102,241,0.12)";
+  const bandFill   = isDark ? "rgba(99,102,241,0.18)" : "rgba(99,102,241,0.12)";
   const bandStroke = "#6366f1";
-  const gridC     = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)";
-  const textC     = isDark ? "#94a3b8" : "#64748b";
+  const gridC      = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)";
+  const textC      = isDark ? "#94a3b8" : "#64748b";
 
-  const bandTop    = py(0.5 * 1 + hw); // at x=1 (right edge)
-  const bandBot    = py(0.5 * 1 - hw);
-  const bandTopL   = py(0.5 * -1 + hw); // at x=-1 (left edge)
-  const bandBotL   = py(0.5 * -1 - hw);
+  const bandTop  = py(0.5 * 1 + hw);
+  const bandBot  = py(0.5 * 1 - hw);
+  const bandTopL = py(0.5 * -1 + hw);
+  const bandBotL = py(0.5 * -1 - hw);
 
-  const x0 = px(-1), x1 = px(1);
+  const x0 = px(-1);
+  const x1 = px(1);
 
-  // Count points inside band
-  const inside = COV_PTS.filter((p) => {
-    const pred = 0.5 * p.x;
-    return Math.abs(p.y - pred) <= hw;
-  }).length;
-  const pct = Math.round((inside / COV_PTS.length) * 100);
-
-  const prefersReduced =
-    typeof window !== "undefined"
-      ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
-      : false;
+  const inside = COV_PTS.filter((p) => Math.abs(p.y - 0.5 * p.x) <= hw).length;
+  const pct    = Math.round((inside / COV_PTS.length) * 100);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+    /* containerRef + interactionHandlers wire autoplay pause/resume */
+    <div ref={containerRef} {...interactionHandlers} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <IllustrationCard>
         <svg
           viewBox={`0 0 ${SVG_W} ${SVG_H}`}
@@ -327,49 +431,30 @@ function CoverageSVG({ isDark }: { isDark: boolean }) {
           role="img"
           aria-label="Scatter plot with conformal prediction band"
         >
-          {/* Grid */}
           {[-0.5, 0, 0.5].map((v) => (
-            <line key={v} x1={px(-1)} y1={py(v)} x2={px(1)} y2={py(v)}
-              stroke={gridC} strokeWidth="1" />
+            <line key={v} x1={px(-1)} y1={py(v)} x2={px(1)} y2={py(v)} stroke={gridC} strokeWidth="1" />
           ))}
 
-          {/* Prediction band */}
+          {/* Prediction band — recomputed each rAF tick, no CSS `d` transition */}
           <polygon
             points={`${x0},${bandTopL} ${x1},${bandTop} ${x1},${bandBot} ${x0},${bandBotL}`}
             fill={bandFill}
-            style={{ transition: prefersReduced ? "none" : "all 0.3s ease" }}
           />
-          {/* Band edges */}
           <line x1={x0} y1={bandTopL} x2={x1} y2={bandTop}
-            stroke={bandStroke} strokeWidth="1.5" strokeDasharray="4,3" opacity={0.7}
-            style={{ transition: prefersReduced ? "none" : "all 0.3s ease" }}
-          />
+            stroke={bandStroke} strokeWidth="1.5" strokeDasharray="4,3" opacity={0.7} />
           <line x1={x0} y1={bandBotL} x2={x1} y2={bandBot}
-            stroke={bandStroke} strokeWidth="1.5" strokeDasharray="4,3" opacity={0.7}
-            style={{ transition: prefersReduced ? "none" : "all 0.3s ease" }}
-          />
-          {/* Regression line */}
+            stroke={bandStroke} strokeWidth="1.5" strokeDasharray="4,3" opacity={0.7} />
           <line x1={x0} y1={py(-0.5)} x2={x1} y2={py(0.5)}
             stroke={bandStroke} strokeWidth="1.5" opacity={0.55} />
 
-          {/* Data points */}
           {COV_PTS.map((p, i) => {
-            const pred = 0.5 * p.x;
-            const inBand = Math.abs(p.y - pred) <= hw;
+            const inBand = Math.abs(p.y - 0.5 * p.x) <= hw;
             return (
-              <circle
-                key={i}
-                cx={px(p.x)}
-                cy={py(p.y)}
-                r="3.5"
-                fill={inBand ? "#6366f1" : "#ef4444"}
-                opacity={inBand ? 0.85 : 0.7}
-                style={{ transition: prefersReduced ? "none" : "fill 0.3s ease" }}
-              />
+              <circle key={i} cx={px(p.x)} cy={py(p.y)} r="3.5"
+                fill={inBand ? "#6366f1" : "#ef4444"} opacity={inBand ? 0.85 : 0.7} />
             );
           })}
 
-          {/* Counter */}
           <text x={SVG_W - 6} y={14} textAnchor="end" fontSize="10"
             fontFamily="ui-monospace,monospace" fill={textC}>
             {inside}/{COV_PTS.length} inside ({pct}%)
@@ -381,7 +466,7 @@ function CoverageSVG({ isDark }: { isDark: boolean }) {
           value={target}
           min={80}
           max={99}
-          onChange={setTarget}
+          onChange={(v) => { setTarget(v); interactionHandlers.onPointerDown(); }}
           formatValue={(v) => `${v}%`}
           accentColor="#6366f1"
         />
@@ -422,7 +507,11 @@ const PRIV_OFFSETS = (() => {
 })();
 
 function PrivacySVG({ isDark }: { isDark: boolean }) {
-  const [noise, setNoise] = useState(0);
+  // Autoplay: ping-pong DP noise 0→100→0 over 6 s.
+  const { value: noise, setValue: setNoise, containerRef, interactionHandlers } = useAutoplay({
+    min: 0, max: 100, periodMs: 6000, representativeValue: 0,
+  });
+
   const sigma = (noise / 100) * 0.7;
 
   const SVG_W = 280;
@@ -430,57 +519,55 @@ function PrivacySVG({ isDark }: { isDark: boolean }) {
   const px = (x: number) => SVG_W / 2 + x * 100;
   const py = (y: number) => SVG_H / 2 - y * 100;
 
-  const c0 = isDark ? "#6366f1" : "#4f46e5";
-  const c1 = isDark ? "#22d3ee" : "#0891b2";
+  const c0    = isDark ? "#6366f1" : "#4f46e5";
+  const c1    = isDark ? "#22d3ee" : "#0891b2";
   const textC = isDark ? "#94a3b8" : "#64748b";
 
   return (
-    <IllustrationCard>
-      <svg
-        viewBox={`0 0 ${SVG_W} ${SVG_H}`}
-        width="100%"
-        style={{ display: "block", marginBottom: 10 }}
-        role="img"
-        aria-label="Point cloud privacy noise illustration"
-      >
-        {PRIV_BASE.map((p, i) => {
-          const nx = p.bx + PRIV_OFFSETS[i].dx * sigma;
-          const ny = p.by + PRIV_OFFSETS[i].dy * sigma;
-          const opacity = Math.max(0.2, 0.85 - sigma * 0.5);
-          return (
-            <circle
-              key={i}
-              cx={px(nx)}
-              cy={py(ny)}
-              r="4"
-              fill={p.label === 0 ? c0 : c1}
-              opacity={opacity}
-            />
-          );
-        })}
-        {/* Cluster labels (only visible at low noise) */}
-        <text x={px(-0.35)} y={py(0.1) - 22} textAnchor="middle" fontSize="9"
-          fontFamily="ui-monospace,monospace" fill={textC}
-          opacity={Math.max(0, 1 - noise / 40)}>
-          Group A
-        </text>
-        <text x={px(0.35)} y={py(-0.1) + 28} textAnchor="middle" fontSize="9"
-          fontFamily="ui-monospace,monospace" fill={textC}
-          opacity={Math.max(0, 1 - noise / 40)}>
-          Group B
-        </text>
-      </svg>
+    /* containerRef + interactionHandlers wire autoplay pause/resume */
+    <div ref={containerRef} {...interactionHandlers}>
+      <IllustrationCard>
+        <svg
+          viewBox={`0 0 ${SVG_W} ${SVG_H}`}
+          width="100%"
+          style={{ display: "block", marginBottom: 10 }}
+          role="img"
+          aria-label="Point cloud privacy noise illustration"
+        >
+          {/* Points recomputed each rAF tick from noise value */}
+          {PRIV_BASE.map((p, i) => {
+            const nx = p.bx + PRIV_OFFSETS[i].dx * sigma;
+            const ny = p.by + PRIV_OFFSETS[i].dy * sigma;
+            const opacity = Math.max(0.2, 0.85 - sigma * 0.5);
+            return (
+              <circle key={i} cx={px(nx)} cy={py(ny)} r="4"
+                fill={p.label === 0 ? c0 : c1} opacity={opacity} />
+            );
+          })}
+          {/* Cluster labels fade as noise increases */}
+          <text x={px(-0.35)} y={py(0.1) - 22} textAnchor="middle" fontSize="9"
+            fontFamily="ui-monospace,monospace" fill={textC}
+            opacity={Math.max(0, 1 - noise / 40)}>
+            Group A
+          </text>
+          <text x={px(0.35)} y={py(-0.1) + 28} textAnchor="middle" fontSize="9"
+            fontFamily="ui-monospace,monospace" fill={textC}
+            opacity={Math.max(0, 1 - noise / 40)}>
+            Group B
+          </text>
+        </svg>
 
-      <Slider
-        label="Privacy noise (DP σ)"
-        value={noise}
-        min={0}
-        max={100}
-        onChange={setNoise}
-        formatValue={(v) => v === 0 ? "None" : v < 40 ? "Low" : v < 75 ? "Medium" : "High"}
-        accentColor="#22d3ee"
-      />
-    </IllustrationCard>
+        <Slider
+          label="Privacy noise (DP σ)"
+          value={noise}
+          min={0}
+          max={100}
+          onChange={(v) => { setNoise(v); interactionHandlers.onPointerDown(); }}
+          formatValue={(v) => (v === 0 ? "None" : v < 40 ? "Low" : v < 75 ? "Medium" : "High")}
+          accentColor="#22d3ee"
+        />
+      </IllustrationCard>
+    </div>
   );
 }
 

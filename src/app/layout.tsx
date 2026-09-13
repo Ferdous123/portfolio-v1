@@ -100,6 +100,13 @@ export default function RootLayout({
         className={`${plusJakarta.className} antialiased bg-canvas text-fg overflow-x-hidden transition-colors duration-300`}
         suppressHydrationWarning
       >
+        {/* Skip link — first focusable element, visible on focus for keyboard users */}
+        <a
+          href="#main-content"
+          className="skip-link"
+        >
+          Skip to main content
+        </a>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
