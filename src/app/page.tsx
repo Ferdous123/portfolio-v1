@@ -1,5 +1,5 @@
-import { Suspense } from "react";
 import Hero from "@/components/features/hero";
+import ScrollStory3DLoader from "@/components/features/ScrollStory3DLoader";
 import ResearchThemes from "@/components/features/ResearchThemes";
 import Publications from "@/components/features/Publications";
 import Experience from "@/components/features/experience";
@@ -9,15 +9,18 @@ import Contact from "@/components/features/contact";
 import NavBar from "@/components/layouts/navBar";
 import Footer from "@/components/layouts/footer";
 
+// Publications no longer uses useSearchParams(), so no Suspense boundary needed.
+// All components are wrapped in ErrorBoundary inside their own loader/wrapper
+// where relevant (see ScrollStory3DLoader).
+
 export default function Home() {
   return (
     <>
       <NavBar />
       <Hero />
+      <ScrollStory3DLoader />
       <ResearchThemes />
-      <Suspense>
-        <Publications />
-      </Suspense>
+      <Publications />
       <Experience />
       <Projects />
       <HonorsEducation />

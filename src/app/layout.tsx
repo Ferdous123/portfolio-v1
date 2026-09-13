@@ -73,6 +73,29 @@ export default function RootLayout({
       className={`scroll-smooth ${plusJakarta.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >
+      {/*
+       * Inline script: set html.js BEFORE paint so CSS-gated reveal
+       * animations know JS is present. The 3 s failsafe un-hides everything
+       * in case a component stalls. Must run before React hydration.
+       */}
+      {/* biome-ignore lint: intentional inline script for progressive enhancement */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `(function(){try{document.documentElement.classList.add('js');setTimeout(function(){document.documentElement.classList.add('js-ready');},3000);}catch(e){}})();`,
+        }}
+      />
+      {/* When JS is disabled, framer-motion inline styles stay at opacity:0.
+          This noscript block forces everything visible. */}
+      <noscript>
+        <style>{`
+          *,*::before,*::after{
+            opacity:1!important;
+            transform:none!important;
+            transition:none!important;
+            animation:none!important;
+          }
+        `}</style>
+      </noscript>
       <body
         className={`${plusJakarta.className} antialiased bg-canvas text-fg overflow-x-hidden transition-colors duration-300`}
         suppressHydrationWarning

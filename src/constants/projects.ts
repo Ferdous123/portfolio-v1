@@ -12,7 +12,7 @@ export const projects: ProjectEntry[] = [
   {
     title: "TRACE",
     description:
-      "Evidence-management system where every extracted claim traces back to its source passage. Under continuous development at an AI supercomputer lab. Details, code, and results are not public.",
+      "Evidence-management system where every extracted claim traces back to its source passage. Under continuous development at the AIUB AI Supercomputer Lab, under NDA.",
     tags: ["Evidence Tracing", "NLP", "Research Infrastructure"],
     isNDA: true,
     category: "research",
@@ -28,7 +28,7 @@ export const projects: ProjectEntry[] = [
   {
     title: "covgap-floor",
     description:
-      "Pre-registered 14-arm study confirming an exact finite-sample floor on the group coverage gap in conformal prediction. Nine datasets, public code and data.",
+      "Pre-registered negative study of score design in group-conditional conformal prediction. Confirms that the group coverage gap is mostly noise: nine datasets, public code and data.",
     tags: ["Conformal Prediction", "Fairness", "Bootstrap", "Python"],
     codeUrl: "https://github.com/Ferdous123/covgap-floor",
     category: "research",

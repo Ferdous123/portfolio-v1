@@ -197,3 +197,50 @@ body {
     @apply font-sans;
   }
 }
+
+/* ─── Progressive-enhancement reveal system ────────────────────────────────
+ * Framer-motion inlines opacity:0 during SSR. With JS disabled those styles
+ * persist. The noscript block in layout.tsx handles that case. When JS IS
+ * present, the html.js class is set before paint by the inline script.
+ * After 3 s, html.js-ready is added as a failsafe that un-hides everything.
+ */
+html.js-ready [data-pm-hidden="true"] {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+/* ─── CSS fallbacks and safety guards ─────────────────────────────────────── */
+
+/* scroll-smooth: disable under reduced motion (the html class can't know) */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+}
+
+/* backdrop-filter: only apply where supported */
+@supports not (backdrop-filter: blur(1px)) {
+  .backdrop-blur,
+  [class*="backdrop-blur"] {
+    background-color: var(--canvas) !important;
+  }
+}
+
+/* min-height: use vh as fallback before dvh */
+.min-h-screen {
+  min-height: 100vh;
+  /* biome-ignore: dvh not supported everywhere */
+  min-height: 100dvh;
+}
+
+/* Prevent horizontal overflow from any component */
+body {
+  max-width: 100vw;
+}
+
+/* Ensure framer-motion initial hidden states are overridden once JS-ready */
+html.js-ready .framer-hidden {
+  opacity: 1 !important;
+  transform: none !important;
+  transition: none !important;
+}

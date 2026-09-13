@@ -1,7 +1,7 @@
 "use client";
 
 import { type PrivateCV } from "@/constants/private-cvs";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 interface Props {
   cv: PrivateCV;
@@ -40,58 +40,78 @@ export default function CVViewer({ cv }: Props) {
   return <PDFViewer file={cv.file} title={cv.title} />;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type PDFDocumentProxy = any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type PDFPageProxy = any;
+
 function PDFViewer({ file, title }: { file: string; title: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
+  const pdfRef = useRef<PDFDocumentProxy | null>(null);
+  const renderingRef = useRef(false);
+
   const [pages, setPages] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
 
+  // Render all pages at cssWidth × min(DPR,3) × 1.5 backing store
+  const renderPages = useCallback(async () => {
+    if (!pdfRef.current || renderingRef.current) return;
+    renderingRef.current = true;
+    const pdf = pdfRef.current;
+    const numPages = pdf.numPages;
+    const containerWidth = containerRef.current?.clientWidth ?? 800;
+    const dpr = Math.min(window.devicePixelRatio ?? 1, 3);
+    const backingScale = dpr * 1.5;
+
+    for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+      const page: PDFPageProxy = await pdf.getPage(pageNum);
+      const viewport = page.getViewport({ scale: 1 });
+      const cssScale = containerWidth / viewport.width;
+      const renderScale = cssScale * backingScale;
+      const renderViewport = page.getViewport({ scale: renderScale });
+
+      const canvas = canvasRefs.current[pageNum - 1];
+      if (!canvas) continue;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) continue;
+
+      canvas.width = renderViewport.width;
+      canvas.height = renderViewport.height;
+      // CSS display size = container width (auto height)
+      canvas.style.width = "100%";
+      canvas.style.height = "auto";
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (page as any).render({ canvasContext: ctx, viewport: renderViewport }).promise;
+    }
+    renderingRef.current = false;
+  }, []);
+
+  // Load the PDF once
   useEffect(() => {
     let cancelled = false;
 
     async function loadPDF() {
       try {
         const pdfjsLib = await import("pdfjs-dist");
-        // Use bundled worker
-        pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-          "pdfjs-dist/build/pdf.worker.min.mjs",
-          import.meta.url
-        ).toString();
+        // Worker is copied to /public to avoid bundler path issues
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
         const loadingTask = pdfjsLib.getDocument({ url: file });
         const pdf = await loadingTask.promise;
         if (cancelled) return;
 
-        const numPages = pdf.numPages;
-        setPages(numPages);
+        pdfRef.current = pdf;
+        setPages(pdf.numPages);
         setLoading(false);
 
-        // Render each page
-        for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-          if (cancelled) return;
-          const page = await pdf.getPage(pageNum);
-          const containerWidth = containerRef.current?.clientWidth ?? 800;
-          const viewport = page.getViewport({ scale: 1 });
-          const scale = Math.min((containerWidth - 32) / viewport.width, 2);
-          const scaledViewport = page.getViewport({ scale });
-
-          const canvas = canvasRefs.current[pageNum - 1];
-          if (!canvas) continue;
-          const ctx = canvas.getContext("2d");
-          if (!ctx) continue;
-
-          canvas.width = scaledViewport.width;
-          canvas.height = scaledViewport.height;
-          canvas.style.width = "100%";
-          canvas.style.height = "auto";
-
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (page as any).render({ canvasContext: ctx, viewport: scaledViewport }).promise;
-        }
-      } catch (err) {
+        // Defer rendering to next tick so canvasRefs are populated
+        setTimeout(() => { if (!cancelled) renderPages(); }, 50);
+      } catch {
         if (!cancelled) {
-          setError("Failed to load PDF. Try the download link below.");
+          setError("Failed to load PDF. Use the download link below.");
           setLoading(false);
         }
       }
@@ -99,7 +119,19 @@ function PDFViewer({ file, title }: { file: string; title: string }) {
 
     loadPDF();
     return () => { cancelled = true; };
-  }, [file]);
+  }, [file, renderPages]);
+
+  // Re-render on container resize (debounced 200ms)
+  useEffect(() => {
+    if (!containerRef.current) return;
+    let debounce: ReturnType<typeof setTimeout>;
+    const ro = new ResizeObserver(() => {
+      clearTimeout(debounce);
+      debounce = setTimeout(() => { renderPages(); }, 200);
+    });
+    ro.observe(containerRef.current);
+    return () => { clearTimeout(debounce); ro.disconnect(); };
+  }, [renderPages]);
 
   return (
     <div>

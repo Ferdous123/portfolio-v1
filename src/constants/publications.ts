@@ -102,7 +102,7 @@ export const publications: Publication[] = [
     theme: "trustworthy-ml",
   },
   {
-    title: "DP-SGD Noise Direction Does Not Shape the Last-Layer Laplace Posterior",
+    title: "DP-SGD Noise Direction Does Not Shape the Last-Layer Laplace Posterior: A Multi-Dataset Mechanistic Analysis",
     venue: "ICCA 2026",
     date: "Aug 2026",
     dateISO: "2026-08-01",
@@ -136,7 +136,7 @@ export const publications: Publication[] = [
     targetVenue: "Engineering Applications of Artificial Intelligence (Elsevier)",
   },
   {
-    title: "Conformal Pareto Certificates: Distribution-Free Finite-Sample Guarantees for Multi-Objective UAV Routing",
+    title: "Conformal Pareto Certificates: Distribution-Free Finite-Sample Guarantees for Multi-Objective UAV Routing Under Weather Uncertainty",
     venue: "",
     date: "2026",
     dateISO: "2026-09-01",
@@ -147,7 +147,7 @@ export const publications: Publication[] = [
     targetVenue: "IEEE Access",
   },
   {
-    title: "The Group Coverage Gap Has an Exact Finite-Sample Floor: A Pre-Registered Study of Conformal Fairness Interventions on Standard Benchmarks",
+    title: "The Group Coverage Gap Is Mostly Noise: A Pre-Registered Negative Study of Score Design in Group-Conditional Conformal Prediction",
     venue: "",
     date: "2026",
     dateISO: "2026-09-01",

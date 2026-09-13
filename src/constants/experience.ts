@@ -27,12 +27,12 @@ export const experiences: ExperienceEntry[] = [
   },
   {
     role: "Research Intern",
-    company: "Applied Intelligence and Informatics Lab",
-    companyUrl: "https://www.nottingham.ac.uk",
+    company: "Applied Intelligence and Informatics Lab (AIIL) · Remote · Nottingham, UK",
+    companyUrl: "",
     period: "Jun 2026 – Sep 2026",
     badge: "Intern",
     summary:
-      "Remote research internship at the Applied Intelligence and Informatics Lab (AIIL), University of Nottingham, UK, under Dr. Md. Saef Ullah Miah. Supplied quantitative analysis and survey methodology for applied collaborative studies.",
+      "Remote research internship at the Applied Intelligence and Informatics Lab (AIIL), an independent lab based in Nottingham, UK, under Dr. Md. Saef Ullah Miah. Supplied quantitative analysis and survey methodology for applied collaborative studies.",
     highlights: [
       "Co-designed survey instruments for labour-market studies of Bangladeshi RMG workers, including EFA-based scale validation and ANOVA-regression pipelines.",
       "Contributed the quantitative and data-processing side of two accepted conference papers on RMG productivity and waste classification.",

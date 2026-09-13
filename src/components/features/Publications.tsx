@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { publications, type PublicationStatus, type PublicationTheme } from "@/constants/publications";
 import { Reveal } from "@/components/ui/Reveal";
 import PublicationTimeline from "./PublicationTimeline";
@@ -44,24 +44,30 @@ const STATUS_LABEL: Record<PublicationStatus, string> = {
 
 export default function Publications() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  // Removed useSearchParams() — was preventing SSR of the publications list.
+  // URL sync now reads window.location.search in a client-side useEffect.
 
   const [status, setStatus] = useState<PublicationStatus | "all">("all");
   const [theme, setTheme] = useState<PublicationTheme | "all">("all");
   const [firstOnly, setFirstOnly] = useState(false);
 
-  // Sync from URL on mount
+  // Sync from URL on mount (client-only; safe because we use window)
   useEffect(() => {
-    const s = searchParams.get("status");
-    const t = searchParams.get("theme");
-    const f = searchParams.get("first");
-    if (s && (s === "all" || s === "published" || s === "accepted" || s === "inprep")) {
-      setStatus(s as PublicationStatus | "all");
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const s = params.get("status");
+      const t = params.get("theme");
+      const f = params.get("first");
+      if (s && (s === "all" || s === "published" || s === "accepted" || s === "inprep")) {
+        setStatus(s as PublicationStatus | "all");
+      }
+      if (t && (t === "all" || t === "uav-robust" || t === "trustworthy-ml" || t === "applied-bd")) {
+        setTheme(t as PublicationTheme | "all");
+      }
+      if (f === "1") setFirstOnly(true);
+    } catch {
+      // window not available (should not happen in useEffect, but guard anyway)
     }
-    if (t && (t === "all" || t === "uav-robust" || t === "trustworthy-ml" || t === "applied-bd")) {
-      setTheme(t as PublicationTheme | "all");
-    }
-    if (f === "1") setFirstOnly(true);
   }, []);
 
   // Sync to URL
