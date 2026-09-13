@@ -20,6 +20,6 @@ export const privateCVs: PrivateCV[] = [
   {
     slug: "research",
     title: "Research CV",
-    file: null,
+    file: "/cv/research-7q4m2k.pdf",
   },
 ];
