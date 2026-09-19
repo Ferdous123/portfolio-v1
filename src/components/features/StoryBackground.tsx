@@ -336,10 +336,6 @@ export default function StoryBackground() {
         <canvas ref={canvasRef} className={ready ? "story-bg__canvas is-ready" : "story-bg__canvas"} />
         <div className="story-bg__scrim" />
       </div>
-      <div className="story-chip" aria-hidden="true">
-        <span className="story-chip__tag">Illustration</span>
-        <span ref={chipRef} className="story-chip__text">{BEATS[POSTER_BEAT].text}</span>
-      </div>
     </>
   );
 }
