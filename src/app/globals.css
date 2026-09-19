@@ -436,9 +436,9 @@ html.js-ready [style*="opacity:0"]:not(input) {
   right: 0;
   bottom: 0;
   left: 0;
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.35);
 }
-.dark .story-bg__scrim { background: rgba(15, 15, 17, 0.66); }
+.dark .story-bg__scrim { background: rgba(15, 15, 17, 0.3); }
 
 .story-content {
   position: relative;
@@ -450,11 +450,16 @@ html.js-ready [style*="opacity:0"]:not(input) {
   max-width: 1680px;
   margin: 12vh auto 0;
   border-radius: 1.25rem;
-  background: rgba(255, 255, 255, 0.88);
-  -webkit-backdrop-filter: blur(14px) saturate(1.1);
-  backdrop-filter: blur(14px) saturate(1.1);
+  background: rgba(255, 255, 255, 0.6);
+  -webkit-backdrop-filter: blur(8px) saturate(1.15);
+  backdrop-filter: blur(8px) saturate(1.15);
 }
-.dark .story-panel { background: rgba(15, 15, 17, 0.85); }
+.dark .story-panel { background: rgba(15, 15, 17, 0.5); }
+/* Cards inside the panels are see-through too, so the story shows on narrow phones */
+.story-panel .bg-surface,
+.story-panel .bg-canvas { background-color: rgba(250, 250, 249, 0.55); }
+.dark .story-panel .bg-surface,
+.dark .story-panel .bg-canvas { background-color: rgba(24, 24, 32, 0.5); }
 .story-panel--first {
   margin-top: 0;
   border-top-left-radius: 0;
@@ -465,8 +470,8 @@ html.js-ready [style*="opacity:0"]:not(input) {
   border-bottom-right-radius: 0;
 }
 @supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
-  .story-panel { background: rgba(255, 255, 255, 0.95); }
-  .dark .story-panel { background: rgba(15, 15, 17, 0.95); }
+  .story-panel { background: rgba(255, 255, 255, 0.82); }
+  .dark .story-panel { background: rgba(15, 15, 17, 0.82); }
 }
 
 /* Story-beat chip: tiny, fixed, bottom-right (the text column is left-aligned); hidden on narrow phones. */
