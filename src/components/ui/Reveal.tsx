@@ -17,7 +17,9 @@ type RevealProps = {
 export function Reveal({ children, className, delay = 0 }: RevealProps) {
   return (
     <motion.div
-      className={className}
+      // framer-hidden: CSS failsafe in globals.css reveals this after 3 s
+      // (html.js-ready .framer-hidden { opacity:1 !important }) when JS files fail to load.
+      className={`framer-hidden${className ? ` ${className}` : ""}`}
       variants={revealVariants}
       initial="hidden"
       whileInView="visible"

@@ -81,7 +81,7 @@ export default function RootLayout({
       {/* biome-ignore lint: intentional inline script for progressive enhancement */}
       <script
         dangerouslySetInnerHTML={{
-          __html: `(function(){try{document.documentElement.classList.add('js');setTimeout(function(){document.documentElement.classList.add('js-ready');},3000);}catch(e){}})();`,
+          __html: `(function(){try{document.documentElement.classList.add('js');setTimeout(function(){if(!window.__hydrated){document.documentElement.classList.add('js-ready');}},3000);}catch(e){}})();`,
         }}
       />
       {/* When JS is disabled, framer-motion inline styles stay at opacity:0.

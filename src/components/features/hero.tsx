@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { container, item, fadeIn } from "@/constants/variants";
 import { pubStats } from "@/constants/publications";
 import { useTypingAnimation } from "@/hooks/useTypingAnimation";
 
 // Count-up hook
 function useCountUp(target: number, enabled: boolean, duration = 800) {
-  const [value, setValue] = useState(0);
+  // Start at the real number so server HTML, no-JS and failed-JS loads never show 0.
+  const [value, setValue] = useState(target);
   useEffect(() => {
-    if (!enabled) { setValue(target); return; }
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!enabled || reduced) { setValue(target); return; }
     let start: number | null = null;
     const raf = (ts: number) => {
       if (!start) start = ts;
@@ -48,6 +50,97 @@ function StatCard({
         {label}
       </p>
     </a>
+  );
+}
+
+// ─── Hero research figure with pointer-driven 3D tilt ────────────────────────
+// Displays a real figure from the public wdro-mor repo (population-risk overlay).
+// Tilt is pointer-only (not touch), disabled for reduced-motion and forced-colors.
+function HeroFigure({ reducedMotion }: { reducedMotion: boolean }) {
+  const mouseX = useMotionValue(0.5);
+  const mouseY = useMotionValue(0.5);
+
+  const springConfig = { stiffness: 280, damping: 28, mass: 0.6 };
+  const rotateY = useSpring(useTransform(mouseX, [0, 1], [-8, 8]), springConfig);
+  const rotateX = useSpring(useTransform(mouseY, [0, 1], [6, -6]), springConfig);
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      mouseX.set((e.clientX - rect.left) / rect.width);
+      mouseY.set((e.clientY - rect.top) / rect.height);
+    },
+    [mouseX, mouseY]
+  );
+
+  const handleMouseLeave = useCallback(() => {
+    mouseX.set(0.5);
+    mouseY.set(0.5);
+  }, [mouseX, mouseY]);
+
+  return (
+    <motion.div
+      className="w-full mt-10 lg:mt-0 framer-hidden"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.45, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+      onMouseMove={reducedMotion ? undefined : handleMouseMove}
+      onMouseLeave={reducedMotion ? undefined : handleMouseLeave}
+      /* perspective lives on the parent; the child rotates */
+      style={{ perspective: reducedMotion ? undefined : 900 }}
+    >
+      <motion.div
+        style={
+          reducedMotion
+            ? {}
+            : {
+                rotateX,
+                rotateY,
+                transformStyle: "preserve-3d" as const,
+              }
+        }
+      >
+        {/* Frame: rounded, layered shadow, hairline border */}
+        <div
+          className="rounded-2xl overflow-hidden border"
+          style={{
+            borderColor: "rgba(148,163,184,0.15)",
+            boxShadow:
+              "0 2px 8px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.10), 0 20px 56px rgba(0,0,0,0.10)",
+          }}
+        >
+          {/* Fixed-ratio image via intrinsic width/height (no layout shift) */}
+          <picture>
+            <source
+              srcSet="/research/fig_risk_overlay.webp"
+              type="image/webp"
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/research/fig_risk_overlay.jpg"
+              alt="UAV routes (energy-optimal, balanced, safest) over a population-density risk field across Dhaka, NYC, Manaus, In Salah, La Paz and Tromsø — six climate zones from the WDRO-MOR study."
+              width={1400}
+              height={870}
+              loading="eager"
+              decoding="async"
+              style={{ width: "100%", height: "auto", display: "block" }}
+            />
+          </picture>
+        </div>
+        {/* Factual caption */}
+        <p
+          className="mt-2 text-right"
+          style={{
+            fontSize: 10,
+            fontFamily: "ui-monospace, monospace",
+            letterSpacing: "0.03em",
+            opacity: 0.45,
+          }}
+        >
+          From the WDRO-MOR reproducibility release
+        </p>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -89,7 +182,10 @@ export default function Hero() {
       className="relative min-h-screen flex flex-col justify-center px-6 lg:px-[8%] pt-28 pb-20"
     >
       <div className="max-w-7xl w-full mx-auto">
-        <motion.div variants={container} initial="hidden" animate="visible" className="max-w-3xl">
+        {/* Two-column layout: text left, research figure right at lg+ */}
+        <div className="flex flex-col lg:flex-row lg:items-center gap-10 lg:gap-14 xl:gap-20">
+        {/* framer-hidden: CSS failsafe reveals after 3 s if JS files fail to load */}
+        <motion.div variants={container} initial="hidden" animate="visible" className="flex-1 min-w-0 max-w-[680px] framer-hidden">
           {/* Status badge */}
           <motion.div variants={fadeIn} className="mb-10 flex items-center gap-3">
             <span className="flex items-center gap-2 text-xs font-mono tracking-widest uppercase text-fg-muted">
@@ -189,6 +285,12 @@ export default function Hero() {
             </a>
           </motion.div>
         </motion.div>
+
+        {/* Research figure — right column */}
+        <div className="w-full lg:w-[42%] lg:flex-shrink-0">
+          <HeroFigure reducedMotion={reducedMotion} />
+        </div>
+        </div>
       </div>
 
       {/* Blink keyframe */}

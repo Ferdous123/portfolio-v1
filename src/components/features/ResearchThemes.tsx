@@ -790,12 +790,16 @@ export default function ResearchThemes() {
         </p>
 
         {/* ── Theme 1: UAV & DRO ─────────────────────────────────────────── */}
-        <div className="grid lg:grid-cols-2 gap-12 items-start mb-20">
-          <div>
+        <div className="mb-20">
+          {/* Text block — full width with a readable measure */}
+          <div className="max-w-2xl mb-8">
             <span className="inline-block text-xs font-mono tracking-widest uppercase px-3 py-1 rounded-full border mb-4 bg-indigo-500/10 border-indigo-500/30 text-indigo-400">
               UAV Routing &amp; DRO
             </span>
-            <p className="text-base text-fg-muted leading-relaxed mb-6">
+            <h3 className="text-xl font-semibold text-fg tracking-tight mt-1 mb-3">
+              Route Planning Under Wind Uncertainty
+            </h3>
+            <p className="text-base text-fg-muted leading-relaxed mb-5">
               CVaR and Wasserstein distributionally robust optimisation for UAV
               route planning under stochastic wind. Bayesian forecast correction,
               3D altitude-aware routing, and PX4 SITL simulation cross-validation
@@ -807,16 +811,23 @@ export default function ResearchThemes() {
               caption="Risk–cost frontier for WDRO-MOR and a per-zone tuned CVaR baseline across six global climate zones. From the public wdro-mor reproducibility release."
             />
           </div>
-          <UAVMiniMap isDark={isDark} />
+          {/* Single illustration — centred, at most ~900 px wide */}
+          <div className="max-w-[900px]">
+            <UAVMiniMap isDark={isDark} />
+          </div>
         </div>
 
         {/* ── Theme 2: Trustworthy ML ────────────────────────────────────── */}
-        <div className="grid lg:grid-cols-2 gap-12 items-start mb-20 lg:grid-flow-dense">
-          <div className="lg:col-start-2">
+        <div className="mb-20">
+          {/* Text block */}
+          <div className="max-w-2xl mb-8">
             <span className="inline-block text-xs font-mono tracking-widest uppercase px-3 py-1 rounded-full border mb-4 bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
               Trustworthy ML
             </span>
-            <p className="text-base text-fg-muted leading-relaxed mb-6">
+            <h3 className="text-xl font-semibold text-fg tracking-tight mt-1 mb-3">
+              Guarantees for When Models Are Wrong
+            </h3>
+            <p className="text-base text-fg-muted leading-relaxed mb-5">
               Conformal prediction for finite-sample coverage certificates.
               Differential privacy (DP-SGD, Opacus) for federated learning.
               Last-layer Laplace posteriors and embedding-based clustering
@@ -829,25 +840,34 @@ export default function ResearchThemes() {
               caption="Coverage gap (reported − nominal) for 11 methods from the conformal-prediction literature versus the theoretical floor (gray band: 0–95th percentile of floor). Orange diamonds exceed the floor (p < 0.05); blue circles are statistically indistinguishable. Most reported gaps are floor-bound, not method-specific improvements."
             />
           </div>
-          <div className="lg:col-start-1 lg:row-start-1 flex flex-col gap-5">
+          {/* Two illustrations side by side at ≥ 640 px, stacked on phones */}
+          <div className="grid sm:grid-cols-2 gap-5">
             <CoverageSVG isDark={isDark} />
             <PrivacySVG isDark={isDark} />
           </div>
         </div>
 
         {/* ── Theme 3: Applied Bangladesh ────────────────────────────────── */}
-        <div className="grid lg:grid-cols-2 gap-12 items-start">
-          <div>
+        <div>
+          {/* Text block */}
+          <div className="max-w-2xl mb-8">
             <span className="inline-block text-xs font-mono tracking-widest uppercase px-3 py-1 rounded-full border mb-4 bg-amber-500/10 border-amber-500/30 text-amber-400">
               Applied Research · Bangladesh
             </span>
-            <p className="text-base text-fg-muted leading-relaxed mb-6">
+            <h3 className="text-xl font-semibold text-fg tracking-tight mt-1 mb-3">
+              Quantitative Studies of Labour and Environment
+            </h3>
+            <p className="text-base text-fg-muted leading-relaxed">
               Quantitative and survey studies on Bangladesh&apos;s readymade garment
               (RMG) sector, textile wastewater, and urban waste classification.
               Survey design, EFA-based scale validation, ANOVA, and regression
               pipelines.
             </p>
-            <ul className="space-y-3">
+          </div>
+          {/* Likert bars and paper list — side by side, no dead space */}
+          <div className="grid sm:grid-cols-2 gap-8 items-start">
+            <LikertBars isDark={isDark} />
+            <ul className="space-y-3 pt-1">
               {[
                 { title: "Environmental Challenges of Textile Wastewater in Bangladesh", venue: "ICTSE 2025, BUTEX" },
                 { title: "Determinants of Pay Satisfaction and Working Conditions Among Bangladeshi RMG Workers", venue: "ICTSE 2026, BUTEX" },
@@ -864,7 +884,6 @@ export default function ResearchThemes() {
               ))}
             </ul>
           </div>
-          <LikertBars isDark={isDark} />
         </div>
       </Reveal>
     </section>

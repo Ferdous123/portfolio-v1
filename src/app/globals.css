@@ -247,6 +247,16 @@ html.js-ready .framer-hidden {
   transition: none !important;
 }
 
+/* 3-second failsafe: js-ready is only added when the app never hydrated
+ * (JS bundle failed), so this never touches a working page. Inputs are
+ * excluded because the custom sliders keep their native range input invisible. */
+html.js-ready [style*="opacity: 0"]:not(input),
+html.js-ready [style*="opacity:0"]:not(input) {
+  opacity: 1 !important;
+  transform: none !important;
+  transition: none !important;
+}
+
 /* ─── Skip link (accessibility) ─────────────────────────────────────────────
  * Off-screen by default, visible on :focus for keyboard users. */
 .skip-link {

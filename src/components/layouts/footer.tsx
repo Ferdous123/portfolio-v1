@@ -16,6 +16,12 @@ export default function Footer() {
 
         <div className="flex items-center gap-6">
           <a
+            href="/about"
+            className="text-xs font-mono tracking-widest uppercase text-fg-subtle hover:text-fg transition-colors"
+          >
+            About
+          </a>
+          <a
             href="https://github.com/Ferdous123"
             target="_blank"
             rel="noopener noreferrer"
