@@ -726,7 +726,7 @@ function FigureLightbox({
         </button>
       </DialogTrigger>
       <DialogContent
-        className="max-w-3xl w-full"
+        className="w-[96vw] max-w-[96vw] sm:max-w-[min(94vw,1400px)] max-h-[94vh] overflow-y-auto"
         style={{ padding: "20px" }}
         aria-describedby="fig-desc"
       >
@@ -737,11 +737,11 @@ function FigureLightbox({
           <Image
             src={src}
             alt={alt}
-            width={900}
-            height={560}
-            className="w-full h-auto object-contain"
+            width={1600}
+            height={1000}
+            className="w-full h-auto max-h-[78vh] object-contain"
             priority
-            sizes="(max-width: 768px) 95vw, 800px"
+            sizes="(max-width: 768px) 96vw, min(94vw, 1400px)"
           />
         </div>
         <p
