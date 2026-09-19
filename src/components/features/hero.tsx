@@ -11,8 +11,10 @@ function useCountUp(target: number, enabled: boolean, duration = 800) {
   // Start at the real number so server HTML, no-JS and failed-JS loads never show 0.
   const [value, setValue] = useState(target);
   useEffect(() => {
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (!enabled || reduced) { setValue(target); return; }
+    // Count-up runs regardless of prefers-reduced-motion (it's a number change,
+    // not a vestibular motion) — only the `enabled` gate (IntersectionObserver)
+    // controls it.
+    if (!enabled) { setValue(target); return; }
     let start: number | null = null;
     const raf = (ts: number) => {
       if (!start) start = ts;
@@ -167,7 +169,9 @@ export default function Hero() {
     return () => io.disconnect();
   }, []);
 
-  const { displayed } = useTypingAnimation(!reducedMotion);
+  // Typing animation always enabled — text-cycling is not vestibular motion.
+  // Large-motion effects (hero tilt) still respect reducedMotion via HeroFigure.
+  const { displayed } = useTypingAnimation(true);
 
   const stats = [
     { value: pubStats.total,          label: "Papers published or accepted", href: "/#publications" },

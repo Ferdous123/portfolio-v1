@@ -61,11 +61,14 @@ function useAutoplay({
   );
 
   // Start rAF only when conditions allow.
+  // Autoplay runs regardless of prefers-reduced-motion (slider ping-pong is
+  // non-vestibular — it is a value change, not camera/parallax motion).
+  // prefersReduced is kept only to set the static representative value below.
   const startRaf = useCallback(() => {
-    if (rafRef.current !== null || !inViewRef.current || pausedRef.current || prefersReduced)
+    if (rafRef.current !== null || !inViewRef.current || pausedRef.current)
       return;
     rafRef.current = requestAnimationFrame(tick);
-  }, [tick, prefersReduced]);
+  }, [tick]);
 
   // Pause on any user interaction; resume automatically after 3 s.
   const handleInteraction = useCallback(() => {
@@ -80,11 +83,9 @@ function useAutoplay({
   }, [stopRaf, startRaf]);
 
   // IntersectionObserver: start/stop when the card enters/leaves the viewport.
+  // Autoplay runs even with prefers-reduced-motion (slider value change is
+  // non-vestibular). Pause on interaction and offscreen pausing are preserved.
   useEffect(() => {
-    if (prefersReduced) {
-      setValue(representativeValue);
-      return;
-    }
     const el = containerRef.current;
     if (!el) return;
     const obs = new IntersectionObserver(
@@ -104,7 +105,7 @@ function useAutoplay({
       stopRaf();
       if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
     };
-  }, [prefersReduced, representativeValue, startRaf, stopRaf]);
+  }, [startRaf, stopRaf]);
 
   // Shared event handlers to attach to the card wrapper.
   const interactionHandlers = useMemo(
@@ -790,63 +791,64 @@ export default function ResearchThemes() {
         </p>
 
         {/* ── Theme 1: UAV & DRO ─────────────────────────────────────────── */}
+        {/* Mobile: text first, then figure. Desktop (lg+): figure left (~5/12,
+            max 460 px), text right — vertically centred, no empty areas. */}
         <div className="mb-20">
-          {/* Text block — full width with a readable measure */}
-          <div className="max-w-2xl mb-8">
-            <span className="inline-block text-xs font-mono tracking-widest uppercase px-3 py-1 rounded-full border mb-4 bg-indigo-500/10 border-indigo-500/30 text-indigo-400">
-              UAV Routing &amp; DRO
-            </span>
-            <h3 className="text-xl font-semibold text-fg tracking-tight mt-1 mb-3">
-              Route Planning Under Wind Uncertainty
-            </h3>
-            <p className="text-base text-fg-muted leading-relaxed mb-5">
-              CVaR and Wasserstein distributionally robust optimisation for UAV
-              route planning under stochastic wind. Bayesian forecast correction,
-              3D altitude-aware routing, and PX4 SITL simulation cross-validation
-              across six global climate zones.
-            </p>
-            <FigureLightbox
-              src="/research/fig_frontier.webp"
-              alt="Pareto frontier chart of CVaR vs cost for WDRO and tuned-CVaR baseline across six climate zones"
-              caption="Risk–cost frontier for WDRO-MOR and a per-zone tuned CVaR baseline across six global climate zones. From the public wdro-mor reproducibility release."
-            />
-          </div>
-          {/* Single illustration — centred, at most ~900 px wide */}
-          <div className="max-w-[900px]">
-            <UAVMiniMap isDark={isDark} />
+          <div className="flex flex-col lg:flex-row lg:items-center lg:gap-10">
+            {/* Illustration — left on lg+, after text on mobile */}
+            <div className="order-2 lg:order-1 lg:flex-shrink-0 lg:w-5/12 lg:max-w-[460px] mt-6 lg:mt-0">
+              <UAVMiniMap isDark={isDark} />
+            </div>
+            {/* Text — right on lg+, first on mobile */}
+            <div className="order-1 lg:order-2 flex-1 min-w-0">
+              <span className="inline-block text-xs font-mono tracking-widest uppercase px-3 py-1 rounded-full border mb-4 bg-indigo-500/10 border-indigo-500/30 text-indigo-400">
+                UAV Routing &amp; DRO
+              </span>
+              <h3 className="text-xl font-semibold text-fg tracking-tight mt-1 mb-3">
+                Route Planning Under Wind Uncertainty
+              </h3>
+              <p className="text-base text-fg-muted leading-relaxed mb-5">
+                CVaR and Wasserstein distributionally robust optimisation for UAV
+                route planning under stochastic wind. Bayesian forecast correction,
+                3D altitude-aware routing, and PX4 SITL simulation cross-validation
+                across six global climate zones.
+              </p>
+              <FigureLightbox
+                src="/research/fig_frontier.webp"
+                alt="Pareto frontier chart of CVaR vs cost for WDRO and tuned-CVaR baseline across six climate zones"
+                caption="Risk–cost frontier for WDRO-MOR and a per-zone tuned CVaR baseline across six global climate zones. From the public wdro-mor reproducibility release."
+              />
+            </div>
           </div>
         </div>
 
         {/* ── Theme 2: Trustworthy ML ────────────────────────────────────── */}
+        {/* Text block full-width on top; two illustrations side by side below (≥ sm). */}
         <div className="mb-20">
-          {/* Two-column layout at lg+: text left ~5/12, illustrations right ~7/12 */}
-          <div className="flex flex-col lg:flex-row lg:items-start lg:gap-10">
-            {/* Text block — left column */}
-            <div className="lg:w-5/12 mb-8 lg:mb-0 flex-shrink-0">
-              <span className="inline-block text-xs font-mono tracking-widest uppercase px-3 py-1 rounded-full border mb-4 bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
-                Trustworthy ML
-              </span>
-              <h3 className="text-xl font-semibold text-fg tracking-tight mt-1 mb-3">
-                Guarantees for When Models Are Wrong
-              </h3>
-              <p className="text-base text-fg-muted leading-relaxed mb-5">
-                Conformal prediction for finite-sample coverage certificates.
-                Differential privacy (DP-SGD, Opacus) for federated learning.
-                Last-layer Laplace posteriors and embedding-based clustering
-                benchmarks. Statistical rigour for ML systems that must behave
-                reliably in deployment.
-              </p>
-              <FigureLightbox
-                src="/research/fig_litfloor.webp"
-                alt="Scatter plot comparing literature coverage gaps to the theoretical conformal floor"
-                caption="Coverage gap (reported − nominal) for 11 methods from the conformal-prediction literature versus the theoretical floor (gray band: 0–95th percentile of floor). Orange diamonds exceed the floor (p < 0.05); blue circles are statistically indistinguishable. Most reported gaps are floor-bound, not method-specific improvements."
-              />
-            </div>
-            {/* Two illustrations — right column, side by side, balanced heights */}
-            <div className="lg:flex-1 grid sm:grid-cols-2 gap-4 items-start">
-              <CoverageSVG isDark={isDark} />
-              <PrivacySVG isDark={isDark} />
-            </div>
+          <div className="max-w-2xl mb-8">
+            <span className="inline-block text-xs font-mono tracking-widest uppercase px-3 py-1 rounded-full border mb-4 bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
+              Trustworthy ML
+            </span>
+            <h3 className="text-xl font-semibold text-fg tracking-tight mt-1 mb-3">
+              Guarantees for When Models Are Wrong
+            </h3>
+            <p className="text-base text-fg-muted leading-relaxed mb-5">
+              Conformal prediction for finite-sample coverage certificates.
+              Differential privacy (DP-SGD, Opacus) for federated learning.
+              Last-layer Laplace posteriors and embedding-based clustering
+              benchmarks. Statistical rigour for ML systems that must behave
+              reliably in deployment.
+            </p>
+            <FigureLightbox
+              src="/research/fig_litfloor.webp"
+              alt="Scatter plot comparing literature coverage gaps to the theoretical conformal floor"
+              caption="Coverage gap (reported − nominal) for 11 methods from the conformal-prediction literature versus the theoretical floor (gray band: 0–95th percentile of floor). Orange diamonds exceed the floor (p < 0.05); blue circles are statistically indistinguishable. Most reported gaps are floor-bound, not method-specific improvements."
+            />
+          </div>
+          {/* Two illustrations — side by side at sm+, stacked on phones */}
+          <div className="grid sm:grid-cols-2 gap-4 items-start">
+            <CoverageSVG isDark={isDark} />
+            <PrivacySVG isDark={isDark} />
           </div>
         </div>
 
