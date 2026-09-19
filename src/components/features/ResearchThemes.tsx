@@ -545,17 +545,15 @@ function PrivacySVG({ isDark }: { isDark: boolean }) {
                 fill={p.label === 0 ? c0 : c1} opacity={opacity} />
             );
           })}
-          {/* Cluster labels fade as noise increases */}
-          <text x={px(-0.35)} y={py(0.1) - 22} textAnchor="middle" fontSize="9"
-            fontFamily="ui-monospace,monospace" fill={textC}
-            opacity={Math.max(0, 1 - noise / 40)}>
-            Group A
-          </text>
-          <text x={px(0.35)} y={py(-0.1) + 28} textAnchor="middle" fontSize="9"
-            fontFamily="ui-monospace,monospace" fill={textC}
-            opacity={Math.max(0, 1 - noise / 40)}>
-            Group B
-          </text>
+          {/* Cluster legend — fixed position bottom-left, no overlap with points */}
+          <g opacity={Math.max(0, 1 - noise / 50)}>
+            <rect x={6} y={SVG_H - 30} width={52} height={22} rx={4}
+              fill={isDark ? "rgba(15,23,42,0.75)" : "rgba(255,255,255,0.75)"} />
+            <circle cx={16} cy={SVG_H - 22} r={4} fill={c0} />
+            <text x={23} y={SVG_H - 18} fontSize="8" fontFamily="ui-monospace,monospace" fill={textC}>Group A</text>
+            <circle cx={16} cy={SVG_H - 11} r={4} fill={c1} />
+            <text x={23} y={SVG_H - 7} fontSize="8" fontFamily="ui-monospace,monospace" fill={textC}>Group B</text>
+          </g>
         </svg>
 
         <Slider
@@ -696,7 +694,8 @@ function LikertBars({ isDark }: { isDark: boolean }) {
             </div>
           ))}
         </div>
-        <p style={{ fontSize: 10, fontFamily: "ui-monospace, monospace", color: textC, margin: 0, opacity: 0.6 }}>
+        {/* paddingRight keeps the text clear of the card's absolute "Illustration" tag */}
+        <p style={{ fontSize: 10, fontFamily: "ui-monospace, monospace", color: textC, margin: 0, opacity: 0.6, paddingRight: 92 }}>
           Illustrative survey data · generic item labels · 5-point Likert scale · n≈fictional
         </p>
       </div>
@@ -796,11 +795,11 @@ export default function ResearchThemes() {
         <div className="mb-20">
           <div className="flex flex-col lg:flex-row lg:items-center lg:gap-10">
             {/* Illustration — left on lg+, after text on mobile */}
-            <div className="order-2 lg:order-1 lg:flex-shrink-0 lg:w-5/12 lg:max-w-[460px] mt-6 lg:mt-0">
+            <div className="order-2 lg:flex-shrink-0 lg:w-5/12 lg:max-w-[460px] mt-6 lg:mt-0">
               <UAVMiniMap isDark={isDark} />
             </div>
             {/* Text — right on lg+, first on mobile */}
-            <div className="order-1 lg:order-2 flex-1 min-w-0">
+            <div className="order-1 flex-1 min-w-0">
               <span className="inline-block text-xs font-mono tracking-widest uppercase px-3 py-1 rounded-full border mb-4 bg-indigo-500/10 border-indigo-500/30 text-indigo-400">
                 UAV Routing &amp; DRO
               </span>

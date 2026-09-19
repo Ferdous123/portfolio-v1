@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const DOMAINS = [
   "Decision-Making Under Uncertainty",
@@ -12,6 +12,7 @@ const TYPE_SPEED = 55;   // ms per char
 const DELETE_SPEED = 28; // ms per char
 const PAUSE_AFTER = 1800; // ms after full word
 const PAUSE_BEFORE = 300; // ms before starting delete
+const INITIAL_HOLD = 3000; // ms the first domain stays after page load
 
 export function useTypingAnimation(enabled: boolean) {
   // Always initialise with the first domain so SSR (and no-JS) renders the full
@@ -19,6 +20,7 @@ export function useTypingAnimation(enabled: boolean) {
   // so it holds DOMAINS[0] briefly, then deletes and types the next domain.
   const [displayed, setDisplayed] = useState(DOMAINS[0]);
   const [domainIndex, setDomainIndex] = useState(0);
+  const firstHoldRef = useRef(true);
   const [phase, setPhase] = useState<"type" | "pause" | "delete" | "wait">(
     enabled ? "pause" : "type"
   );
@@ -41,7 +43,10 @@ export function useTypingAnimation(enabled: boolean) {
     }
 
     if (phase === "pause") {
-      const t = setTimeout(() => setPhase("delete"), PAUSE_BEFORE);
+      // The first domain shown on page load holds longer before the cycle starts.
+      const hold = firstHoldRef.current ? INITIAL_HOLD : PAUSE_BEFORE;
+      firstHoldRef.current = false;
+      const t = setTimeout(() => setPhase("delete"), hold);
       return () => clearTimeout(t);
     }
 
