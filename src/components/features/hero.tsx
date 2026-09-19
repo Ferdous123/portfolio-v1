@@ -170,10 +170,10 @@ export default function Hero() {
   const { displayed } = useTypingAnimation(!reducedMotion);
 
   const stats = [
-    { value: pubStats.total,          label: "Papers published or accepted", href: "#publications" },
-    { value: pubStats.firstAuthor,    label: "As first author",              href: "#publications?first=1" },
-    { value: pubStats.corresponding,  label: "As corresponding author",      href: "#publications" },
-    { value: pubStats.inPrep,         label: "Manuscripts in preparation",   href: "#publications?status=inprep" },
+    { value: pubStats.total,          label: "Papers published or accepted", href: "/#publications" },
+    { value: pubStats.firstAuthor,    label: "As first author",              href: "/?first=1#publications" },
+    { value: pubStats.corresponding,  label: "As corresponding author",      href: "/#publications" },
+    { value: pubStats.inPrep,         label: "Manuscripts in preparation",   href: "/?status=inprep#publications" },
   ];
 
   return (
@@ -217,8 +217,8 @@ export default function Hero() {
             </p>
           </motion.div>
 
-          {/* Verbatim intro copy */}
-          <motion.div variants={item} className="mt-8 space-y-4 max-w-2xl">
+          {/* Verbatim intro copy — paragraph 1 only */}
+          <motion.div variants={item} className="mt-8 max-w-2xl">
             <p className="text-base sm:text-lg text-fg-muted leading-relaxed">
               Drones rarely fail on an average day. They fail on the gust nobody
               planned for. I study how autonomous systems should decide when the
@@ -227,12 +227,6 @@ export default function Hero() {
               machine-learning models that come with guarantees about how often
               they will be wrong and how much they reveal about the people in
               their data.
-            </p>
-            <p className="text-base sm:text-lg text-fg-muted leading-relaxed">
-              Alongside that, I bring the quantitative side to applied studies of
-              Bangladesh&apos;s garment workers, textile wastewater and city waste.
-              I studied Computer Science &amp; Engineering at AIUB and work as a
-              research assistant at the UCHRG Lab.
             </p>
           </motion.div>
 
@@ -259,29 +253,17 @@ export default function Hero() {
             className="mt-12 flex flex-wrap items-center gap-4"
           >
             <a
-              href="#publications"
+              href="/#publications"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-md bg-fg text-fg-inverted text-sm font-semibold hover:opacity-80 transition-opacity duration-200"
             >
               View Publications
               <span className="text-base">→</span>
             </a>
             <a
-              href="#contact"
+              href="/about"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-md border border-border-strong text-sm font-medium text-fg-secondary hover:border-fg-muted hover:text-fg transition-colors duration-200"
             >
-              Get in Touch
-            </a>
-          </motion.div>
-
-          {/* Social links — GitHub only in hero (LinkedIn removed per V2) */}
-          <motion.div variants={fadeIn} className="mt-10 flex items-center gap-6">
-            <a
-              href="https://github.com/Ferdous123"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs font-mono tracking-widest uppercase text-fg-subtle hover:text-fg transition-colors duration-200"
-            >
-              GitHub
+              About me
             </a>
           </motion.div>
         </motion.div>

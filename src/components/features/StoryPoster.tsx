@@ -23,7 +23,7 @@ function wz(z: number) { return 230 - z * 17; }
 // Route control points
 // SP-1: straight line into storm core
 const sp1 = [
-  { x: wx(-14), y: wz(1.5) },
+  { x: wx(-14), y: wz(0)   }, // all routes leave the START pad
   { x: wx(0),   y: wz(1.0) },
   { x: wx(6),   y: wz(0.5) },
   { x: wx(8.3), y: wz(0.2) },   // crash inside storm
@@ -40,7 +40,7 @@ const aw1 = [
 
 // RA-1: wide northern arc, lands at goal
 const ra1 = [
-  { x: wx(-14), y: wz(-1.5) },
+  { x: wx(-14), y: wz(0)    },
   { x: wx(-7),  y: wz(5)    },
   { x: wx(0),   y: wz(8.5)  },
   { x: wx(8),   y: wz(8.5)  },

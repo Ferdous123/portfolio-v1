@@ -819,31 +819,34 @@ export default function ResearchThemes() {
 
         {/* ── Theme 2: Trustworthy ML ────────────────────────────────────── */}
         <div className="mb-20">
-          {/* Text block */}
-          <div className="max-w-2xl mb-8">
-            <span className="inline-block text-xs font-mono tracking-widest uppercase px-3 py-1 rounded-full border mb-4 bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
-              Trustworthy ML
-            </span>
-            <h3 className="text-xl font-semibold text-fg tracking-tight mt-1 mb-3">
-              Guarantees for When Models Are Wrong
-            </h3>
-            <p className="text-base text-fg-muted leading-relaxed mb-5">
-              Conformal prediction for finite-sample coverage certificates.
-              Differential privacy (DP-SGD, Opacus) for federated learning.
-              Last-layer Laplace posteriors and embedding-based clustering
-              benchmarks. Statistical rigour for ML systems that must behave
-              reliably in deployment.
-            </p>
-            <FigureLightbox
-              src="/research/fig_litfloor.webp"
-              alt="Scatter plot comparing literature coverage gaps to the theoretical conformal floor"
-              caption="Coverage gap (reported − nominal) for 11 methods from the conformal-prediction literature versus the theoretical floor (gray band: 0–95th percentile of floor). Orange diamonds exceed the floor (p < 0.05); blue circles are statistically indistinguishable. Most reported gaps are floor-bound, not method-specific improvements."
-            />
-          </div>
-          {/* Two illustrations side by side at ≥ 640 px, stacked on phones */}
-          <div className="grid sm:grid-cols-2 gap-5">
-            <CoverageSVG isDark={isDark} />
-            <PrivacySVG isDark={isDark} />
+          {/* Two-column layout at lg+: text left ~5/12, illustrations right ~7/12 */}
+          <div className="flex flex-col lg:flex-row lg:items-start lg:gap-10">
+            {/* Text block — left column */}
+            <div className="lg:w-5/12 mb-8 lg:mb-0 flex-shrink-0">
+              <span className="inline-block text-xs font-mono tracking-widest uppercase px-3 py-1 rounded-full border mb-4 bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
+                Trustworthy ML
+              </span>
+              <h3 className="text-xl font-semibold text-fg tracking-tight mt-1 mb-3">
+                Guarantees for When Models Are Wrong
+              </h3>
+              <p className="text-base text-fg-muted leading-relaxed mb-5">
+                Conformal prediction for finite-sample coverage certificates.
+                Differential privacy (DP-SGD, Opacus) for federated learning.
+                Last-layer Laplace posteriors and embedding-based clustering
+                benchmarks. Statistical rigour for ML systems that must behave
+                reliably in deployment.
+              </p>
+              <FigureLightbox
+                src="/research/fig_litfloor.webp"
+                alt="Scatter plot comparing literature coverage gaps to the theoretical conformal floor"
+                caption="Coverage gap (reported − nominal) for 11 methods from the conformal-prediction literature versus the theoretical floor (gray band: 0–95th percentile of floor). Orange diamonds exceed the floor (p < 0.05); blue circles are statistically indistinguishable. Most reported gaps are floor-bound, not method-specific improvements."
+              />
+            </div>
+            {/* Two illustrations — right column, side by side, balanced heights */}
+            <div className="lg:flex-1 grid sm:grid-cols-2 gap-4 items-start">
+              <CoverageSVG isDark={isDark} />
+              <PrivacySVG isDark={isDark} />
+            </div>
           </div>
         </div>
 

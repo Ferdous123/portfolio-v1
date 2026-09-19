@@ -1,113 +1,189 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { Reveal } from "@/components/ui/Reveal";
 
-export default function Contact() {
-  const [copied, setCopied] = useState(false);
-  const EMAIL = "ferdus.h.r362@gmail.com";
+const FALLBACK_EMAIL = "ferdus.h.r362@gmail.com";
 
-  async function copyEmail() {
+type FormStatus = "idle" | "pending" | "success" | "error";
+type ErrorCode = string | null;
+
+function statusMessage(status: FormStatus, code: ErrorCode): string | null {
+  if (status === "success") return "Message sent — I will get back to you soon.";
+  if (status === "error") {
+    if (code === "unconfigured")
+      return `The form isn't available right now. Please email ${FALLBACK_EMAIL}.`;
+    if (code === "rate_limit") return "Too many submissions. Please try again later.";
+    if (code === "bot" || code === "toosoon") return "Submission rejected. Please try again.";
+    if (code === "invalid_name") return "Please enter your name (max 100 characters).";
+    if (code === "invalid_email") return "Please enter a valid email address.";
+    if (code === "invalid_message") return "Message must be 10–5000 characters.";
+    if (code === "too_many_links") return "Please reduce the number of links in your message.";
+    return "Something went wrong. Please try again or email directly.";
+  }
+  return null;
+}
+
+export default function Contact() {
+  const searchParams = useSearchParams();
+  const sent = searchParams.get("sent");
+  const errorParam = searchParams.get("error");
+
+  // Derive initial status from URL params (no-JS redirect result)
+  const [status, setStatus] = useState<FormStatus>(
+    sent === "1" ? "success" : errorParam ? "error" : "idle"
+  );
+  const [errorCode, setErrorCode] = useState<ErrorCode>(errorParam ?? null);
+
+  // Render timestamp — filled client-side to enable time-trap
+  const [renderTs] = useState<string>(() => String(Date.now()));
+
+  const formRef = useRef<HTMLFormElement>(null);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (status === "pending") return;
+    setStatus("pending");
+
+    const form = e.currentTarget;
+    const data = new FormData(form);
+    const body = {
+      name: data.get("name"),
+      email: data.get("email"),
+      message: data.get("message"),
+      _ts: renderTs,
+      _hp: data.get("_hp") ?? "",
+    };
+
     try {
-      await navigator.clipboard.writeText(EMAIL);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        setStatus("success");
+        formRef.current?.reset();
+      } else {
+        setStatus("error");
+        setErrorCode(json.code ?? null);
+      }
     } catch {
-      /* clipboard may be blocked in some contexts */
+      setStatus("error");
+      setErrorCode(null);
     }
   }
+
+  const msg = statusMessage(status, errorCode);
+  const isUnconfigured = errorCode === "unconfigured";
 
   return (
     <section
       id="contact"
       className="w-full px-6 lg:px-[8%] py-24 scroll-mt-20 border-t border-border"
     >
-      <Reveal className="max-w-5xl mx-auto">
-        <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 items-start">
-          <div>
-            <p className="text-xs font-mono tracking-widest uppercase text-fg-muted mb-6">
-              Contact
-            </p>
-            <h2 className="text-4xl sm:text-5xl font-bold text-fg tracking-tight leading-tight mb-8">
-              Collaborate or
-              <br />
-              reach out
-            </h2>
-            <p className="text-base text-fg-muted leading-relaxed mb-10 max-w-sm">
-              I am open to research collaborations, visiting student
-              opportunities, and discussions about decision-making under
-              uncertainty or trustworthy ML.
-            </p>
+      <Reveal className="max-w-3xl mx-auto">
+        <p className="text-xs font-mono tracking-widest uppercase text-fg-muted mb-2">
+          Contact
+        </p>
+        <h2 className="text-4xl sm:text-5xl font-bold text-fg tracking-tight leading-tight mb-4">
+          Get in touch
+        </h2>
+        <p className="text-base text-fg-muted leading-relaxed mb-10">
+          Open to research collaborations, visiting student opportunities, and discussions about decision-making under uncertainty or trustworthy ML.
+        </p>
 
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 group">
-                <span className="text-xs font-mono tracking-widest uppercase text-fg-subtle w-16">
-                  Email
-                </span>
-                <a
-                  href={`mailto:${EMAIL}`}
-                  className="text-sm text-fg-muted hover:text-accent transition-colors group-hover:translate-x-0.5 transition-transform duration-200"
-                >
-                  {EMAIL}
-                </a>
-                <button
-                  type="button"
-                  onClick={copyEmail}
-                  className="ml-2 text-xs font-mono text-fg-subtle hover:text-accent transition-colors border border-border rounded px-2 py-0.5"
-                  aria-label="Copy email address"
-                >
-                  {copied ? "Copied!" : "Copy"}
-                </button>
-              </div>
-              <a
-                href="https://github.com/Ferdous123"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 text-sm text-fg-muted hover:text-accent transition-colors duration-200 group"
-              >
-                <span className="text-xs font-mono tracking-widest uppercase text-fg-subtle w-16">
-                  GitHub
-                </span>
-                <span className="group-hover:translate-x-0.5 transition-transform duration-200">
-                  Ferdous123 →
-                </span>
-              </a>
-              <a
-                href="https://www.linkedin.com/in/ferdous-hossain-199782374/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 text-sm text-fg-muted hover:text-accent transition-colors duration-200 group"
-              >
-                <span className="text-xs font-mono tracking-widest uppercase text-fg-subtle w-16">
-                  LinkedIn
-                </span>
-                <span className="group-hover:translate-x-0.5 transition-transform duration-200">
-                  Ferdous Hossain →
-                </span>
-              </a>
-            </div>
-          </div>
-
-          <div className="border border-border rounded-2xl p-8 bg-surface">
-            <p className="text-xs font-mono tracking-widest uppercase text-fg-muted mb-6">
-              Areas I am active in
+        {/* Status banner — aria-live so screen readers announce updates */}
+        <div aria-live="polite" aria-atomic="true" className="mb-6">
+          {msg && (
+            <p
+              className={`text-sm font-mono px-4 py-3 rounded-lg border ${
+                status === "success"
+                  ? "border-green-500/30 bg-green-500/10 text-green-400"
+                  : "border-red-500/30 bg-red-500/10 text-red-400"
+              }`}
+            >
+              {msg}
             </p>
-            <ul className="space-y-3">
-              {[
-                "Distributionally robust optimisation for autonomous systems",
-                "CVaR-based UAV route planning under stochastic wind",
-                "Conformal prediction and coverage guarantees",
-                "Differential privacy in federated ML",
-                "Quantitative methods for Bangladesh socio-economic research",
-              ].map((item) => (
-                <li key={item} className="flex gap-3 text-sm text-fg-muted">
-                  <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-accent shrink-0" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
+          )}
         </div>
+
+        {/* Form — no-JS: native POST; with JS: fetch */}
+        {!isUnconfigured && status !== "success" && (
+          <form
+            ref={formRef}
+            method="post"
+            action="/api/contact"
+            onSubmit={handleSubmit}
+            noValidate
+            className="space-y-5"
+          >
+            {/* Honeypot — hidden from humans, filled by bots */}
+            <div aria-hidden="true" style={{ position: "absolute", left: "-9999px" }}>
+              <label htmlFor="contact-hp">Leave this blank</label>
+              <input id="contact-hp" name="_hp" type="text" autoComplete="off" tabIndex={-1} />
+            </div>
+
+            {/* Render timestamp — time-trap */}
+            <input type="hidden" name="_ts" value={renderTs} />
+
+            <div>
+              <label htmlFor="contact-name" className="block text-xs font-mono tracking-widest uppercase text-fg-muted mb-2">
+                Name
+              </label>
+              <input
+                id="contact-name"
+                name="name"
+                type="text"
+                required
+                maxLength={100}
+                placeholder="Your name"
+                className="w-full px-4 py-3 rounded-lg border border-border bg-surface text-fg text-sm placeholder:text-fg-subtle focus:outline-none focus:border-accent/60 transition-colors"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="contact-email" className="block text-xs font-mono tracking-widest uppercase text-fg-muted mb-2">
+                Email
+              </label>
+              <input
+                id="contact-email"
+                name="email"
+                type="email"
+                required
+                maxLength={200}
+                placeholder="you@example.com"
+                className="w-full px-4 py-3 rounded-lg border border-border bg-surface text-fg text-sm placeholder:text-fg-subtle focus:outline-none focus:border-accent/60 transition-colors"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="contact-message" className="block text-xs font-mono tracking-widest uppercase text-fg-muted mb-2">
+                Message
+              </label>
+              <textarea
+                id="contact-message"
+                name="message"
+                required
+                minLength={10}
+                maxLength={5000}
+                rows={6}
+                placeholder="What would you like to discuss?"
+                className="w-full px-4 py-3 rounded-lg border border-border bg-surface text-fg text-sm placeholder:text-fg-subtle focus:outline-none focus:border-accent/60 transition-colors resize-y"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={status === "pending"}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-md bg-fg text-fg-inverted text-sm font-semibold hover:opacity-80 transition-opacity duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {status === "pending" ? "Sending…" : "Send message"}
+            </button>
+          </form>
+        )}
       </Reveal>
     </section>
   );

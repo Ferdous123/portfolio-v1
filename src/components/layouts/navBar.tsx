@@ -2,7 +2,9 @@
 
 import { FaMoon, FaSun } from "react-icons/fa";
 import { HiMenuAlt3 } from "react-icons/hi";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { navLinks } from "@/constants/navigation";
 import { useTheme } from "@/hooks/useTheme";
@@ -14,11 +16,57 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 
+// Scroll-spy: returns the currently visible section id (home page only)
+function useActiveSection(enabled: boolean): string {
+  const [active, setActive] = useState("");
+  useEffect(() => {
+    if (!enabled) return;
+    const sectionIds = navLinks
+      .filter((l) => l.href.startsWith("/#"))
+      .map((l) => l.href.slice(2));
+
+    const observers: IntersectionObserver[] = [];
+    const visibleMap: Record<string, number> = {};
+
+    sectionIds.forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const obs = new IntersectionObserver(
+        ([entry]) => {
+          visibleMap[id] = entry.isIntersecting ? entry.intersectionRatio : 0;
+          const best = Object.entries(visibleMap).sort((a, b) => b[1] - a[1])[0];
+          if (best && best[1] > 0) setActive(best[0]);
+        },
+        { threshold: [0, 0.1, 0.3], rootMargin: "-80px 0px -20% 0px" }
+      );
+      obs.observe(el);
+      observers.push(obs);
+    });
+    return () => observers.forEach((o) => o.disconnect());
+  }, [enabled]);
+  return active;
+}
+
 export default function NavBar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [hoveredLink, setHoveredLink] = useState<string | null>(null);
   const { isDarkMode, toggleDark, mounted } = useTheme();
   const isScrolled = useScrolled();
+  const pathname = usePathname();
+  const isHome = pathname === "/";
+  const isAbout = pathname === "/about";
+
+  const activeSection = useActiveSection(isHome);
+
+  // Determine active nav item
+  const getIsActive = (href: string) => {
+    if (href === "/about") return isAbout;
+    if (href.startsWith("/#") && isHome) {
+      const id = href.slice(2);
+      return activeSection === id;
+    }
+    return false;
+  };
 
   return (
     <>
@@ -29,36 +77,44 @@ export default function NavBar() {
             : ""
         }`}
       >
-        <a
-          href="#top"
+        <Link
+          href="/"
           className="text-sm font-semibold tracking-widest uppercase text-fg hover:text-accent transition-colors duration-200"
         >
           Ferdus
-        </a>
+        </Link>
 
         <ul className="hidden md:flex items-center gap-10">
-          {navLinks.map(({ label, href }) => (
-            <li
-              key={href}
-              className="relative"
-              onMouseEnter={() => setHoveredLink(href)}
-              onMouseLeave={() => setHoveredLink(null)}
-            >
-              <a
-                href={href}
-                className="text-xs font-medium tracking-widest uppercase text-fg-muted hover:text-fg transition-colors duration-200"
+          {navLinks.map(({ label, href }) => {
+            const active = getIsActive(href);
+            return (
+              <li
+                key={href}
+                className="relative"
+                onMouseEnter={() => setHoveredLink(href)}
+                onMouseLeave={() => setHoveredLink(null)}
               >
-                {label}
-                {hoveredLink === href && (
-                  <motion.span
-                    layoutId="nav-underline"
-                    className="absolute left-0 right-0 -bottom-1.5 h-px bg-accent"
-                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
-                  />
-                )}
-              </a>
-            </li>
-          ))}
+                <Link
+                  href={href}
+                  className={`text-xs font-medium tracking-widest uppercase transition-colors duration-200 ${
+                    active ? "text-fg" : "text-fg-muted hover:text-fg"
+                  }`}
+                >
+                  {label}
+                  {hoveredLink === href && (
+                    <motion.span
+                      layoutId="nav-underline"
+                      className="absolute left-0 right-0 -bottom-1.5 h-px bg-accent"
+                      transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                    />
+                  )}
+                  {active && hoveredLink !== href && (
+                    <span className="absolute left-0 right-0 -bottom-1.5 h-px bg-accent/60" />
+                  )}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
 
         <div className="flex items-center gap-4">
@@ -105,16 +161,21 @@ export default function NavBar() {
           <p className="text-xs font-mono tracking-widest text-fg-muted uppercase mb-6">
             Navigation
           </p>
-          {navLinks.map(({ label, href }) => (
-            <SheetClose key={href} asChild>
-              <a
-                href={href}
-                className="py-2 text-sm font-medium text-fg-secondary hover:text-fg border-b border-border transition-colors"
-              >
-                {label}
-              </a>
-            </SheetClose>
-          ))}
+          {navLinks.map(({ label, href }) => {
+            const active = getIsActive(href);
+            return (
+              <SheetClose key={href} asChild>
+                <Link
+                  href={href}
+                  className={`py-2 text-sm font-medium border-b border-border transition-colors ${
+                    active ? "text-fg" : "text-fg-secondary hover:text-fg"
+                  }`}
+                >
+                  {label}
+                </Link>
+              </SheetClose>
+            );
+          })}
         </SheetContent>
       </Sheet>
     </>
